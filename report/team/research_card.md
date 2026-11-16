@@ -17,19 +17,19 @@ Phần này nối tiếp phần mini research ở buổi lý thuyết (slide 62�
 
 | Field | Hướng dẫn | Nhóm điền |
 | --- | --- | --- |
-| CÂU | R1 / R2 / R3 / R4 | |
-| SOURCE | Paper/blog, năm, URL, loại bằng chứng (benchmark, production report, blog kinh nghiệm) | |
-| CLAIM | Một kết luận gốc của nguồn. Không viết rộng hơn phạm vi paper | |
-| BOUNDARY | Model / dataset / setup giới hạn kết luận đó | |
-| HYPOTHESIS | Nếu đổi shape A→B (hoặc bật/tắt một thành phần), metric X sẽ đổi theo hướng nào, khoảng bao nhiêu | |
-| METHOD | Biến giữ cố định: model, tools, seed, corpus, giá, evaluator. Biến duy nhất được thay đổi: … | |
-| FAILURE / METRIC | Một lỗi dự kiến và cách đo nó: pass rate, pass^5, variance, cost/success, leak, bypass | |
+| CÂU | R1 / R2 / R3 / R4 | R2 |
+| SOURCE | Paper/blog, năm, URL, loại bằng chứng (benchmark, production report, blog kinh nghiệm) | Cemri et al., *Why Do Multi-Agent LLM Systems Fail?* (MAST), NeurIPS 2025 Datasets & Benchmarks, arXiv:2503.13657; loại bằng chứng: taxonomy lỗi rút ra từ trace có gán nhãn của nhiều framework MAS |
+| CLAIM | Một kết luận gốc của nguồn. Không viết rộng hơn phạm vi paper | Lỗi của hệ multi-agent rơi vào 3 nhóm lớn: lỗi đặc tả/thiết kế hệ thống, lệch hướng giữa các agent (inter-agent misalignment), và lỗi kiểm chứng/kết thúc nhiệm vụ (task verification) |
+| BOUNDARY | Model / dataset / setup giới hạn kết luận đó | Taxonomy rút từ trace của các framework MAS dùng LLM thật trên task lập trình và toán; lab dùng MockLLM có điểm yếu cài sẵn, corpus 14 claim public, nên chỉ kiểm được việc phân loại một lỗi cụ thể, không kiểm được tần suất các nhóm lỗi |
+| HYPOTHESIS | Nếu đổi shape A→B (hoặc bật/tắt một thành phần), metric X sẽ đổi theo hướng nào, khoảng bao nhiêu | Lỗi của swarm ở C-002 seed 55 thuộc nhóm task verification: không đối chiếu số ngày trễ trong ticket với order row. Bỏ phần peer và phần tin ticket (swarm → orchestrator, giữ nguyên investigator) thì pass rate ở seed 55 tăng từ 0.929 lên 1.000, còn cost/success thay đổi dưới ±15% |
+| METHOD | Biến giữ cố định: model, tools, seed, corpus, giá, evaluator. Biến duy nhất được thay đổi: … | Giữ cố định: MockLLM, bộ tool chỉ đọc, run_readonly_investigators, seed 55, corpus data/public_claims.jsonl, pricing.yaml, evaluator lab8.metrics.trial_pass. Biến duy nhất được thay đổi: topology swarm (có peer, tin số trễ trong ticket) → orchestrator (quote chỉ từ order row) |
+| FAILURE / METRIC | Một lỗi dự kiến và cách đo nó: pass rate, pass^5, variance, cost/success, leak, bypass | Lỗi dự kiến: refund sai khi ticket khai trễ 5 ngày trong khi DB ghi 2 ngày (status resolved thay vì denied). Đo bằng pass rate và pass^5 trên seed 55, kèm cost/success; thêm số trial approval bypass/leak (kỳ vọng 0) |
 
 ## Kết quả ablation
 
-- Lệnh đã chạy (copy nguyên văn):
-- Run id / file report:
-- Kết quả so với hypothesis (đúng / sai / không kết luận được), kèm số liệu:
+- Lệnh đã chạy (copy nguyên văn): `python -m lab8.benchmark --shapes swarm,orchestrator --cases data/public_claims.jsonl --seeds 55 --out reports/ablation_r2_seed55.json`
+- Run id / file report: `src/reports/ablation_r2_seed55.json`; trial fail `R-swarm-C-002-s55`, đối chứng `R-orchestrator-C-002-s55`
+- Kết quả so với hypothesis (đúng / sai / không kết luận được), kèm số liệu: **đúng**. Ở seed 55, swarm đạt pass 0.929 (13/14) và fail đúng một trial C-002 với `status resolved != denied`; orchestrator đạt 1.000 (14/14). Cost/success 53.23 → 58.07 VND (+9%, nằm trong ±15%). Trace swarm có event `model_override` ghi lại lúc agent ghi đè số ngày trễ bằng con số trong ticket mà không kiểm chứng với DB, khớp nhóm *task verification* (và một phần *disobey task specification*) của MAST. Host không chặn được lỗi này vì approval của C-002 hợp lệ, chỉ có số tiền là tính sai.
 - Giới hạn: MockLLM không phải model sản xuất, latency là `unavailable`.
 
 Muốn đi xa hơn một ablation để lấy điểm cộng thì xem [docs/bonus_topics.md](../../docs/bonus_topics.md).
